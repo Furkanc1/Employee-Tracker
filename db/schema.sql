@@ -8,10 +8,10 @@ CREATE TABLE employees (
   employees_name VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE employees_review (
+CREATE TABLE employees_roles (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     employees_id INT,
-    employees_review TEXT NOT NULL,
+    employees_roles TEXT NOT NULL,
     FOREIGN KEY (employees_id)
     REFERENCES employees(id)
     ON DELETE SET NULL
