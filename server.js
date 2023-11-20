@@ -41,6 +41,9 @@ const viewEmployees = ( res = false, server = false ) => {
       });
     } else {
       console.log(`employees: `, employeesRows);
+      setTimeout(() => {
+        startMenu();
+      }, 3500)
     }
   });
 }
@@ -147,11 +150,34 @@ const startMenu = () => {
       viewEmployees();
     } else if (choice == `Add an employee`) {
      askEmployeeQuestionsAndThenAddEmployee();
+    } else if (choice == `View all departments`) {
+      viewDepartments();
     } else {
-      console.log(`havent coded yet`);
+      console.log(`not coded yet`);
     }
   });
 };
+
+const viewDepartments = (res = false, server = false ) => {
+  const sql = `SELECT id, employees_departments AS title FROM employees_departments`;
+  // `SELECT id, employees_name AS title FROM employees`
+  db.query(sql, (error, departmentRows) => {
+    if (error) {
+      if (server == true) {
+        res.status(500).json({ error: error.message });
+      } else {
+        console.log(`error getting departments`, error);
+      }
+      return;
+    }
+  })
+  };
+
+// Read all employees
+app.get("/api/departments", (req, res) => {
+  let server = true;
+ viewDepartments(res, server);
+});
 
 // initialize server or api routes
 // when you have a post route you are creating a new resource (expects body)

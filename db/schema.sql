@@ -17,4 +17,9 @@ CREATE TABLE employees_roles (
     ON DELETE SET NULL
 );
 
+CREATE TABLE departments (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  departments_name VARCHAR(100) NOT NULL
+);
+
 SELECT DATABASE();

@@ -14,5 +14,13 @@ VALUES (1, "Manager"),
        (5, "Doesnt Work Here"),
        (6, "Assistant Lead"),
        (7, "Goat");
+
+INSERT INTO departments (departments_name)
+VALUES ("Legal"),
+       ("Operations"),
+       ("Production"),
+       ("Risk Management"),
+       ("Engineering");
+       
        
 SELECT * FROM employees_db.employees_roles;
