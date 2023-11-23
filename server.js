@@ -12,6 +12,16 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+const roleLevels = {
+  Manager: 1,
+  Assistant_Manager: 2,
+  Sales_Associate: 3,
+  Full_Time_Lead: 4,
+  Doesnt_Work_Here: 5,
+  Assistant_Lead: 6,
+  Goat: 7
+}
+
 // Connect to database
 const db = mySQL2.createConnection(
   {
@@ -21,16 +31,47 @@ const db = mySQL2.createConnection(
     // TODO: Add MySQL password here
     password: "RavenRaven123",
     database: "employees_db",
-  },
-  () => {
-    console.log(`Connected to the employees_db database.`);
+    multipleStatements: true,
+    // rowsAsArray: true
+  }, (database) => {
+    console.log(`Connected to the employees_db database`, database);
     // progomatically run the schema.sql then seeds.sql (if the employees_DB doesnt exist)
   }
 );
 
 const viewEmployees = ( res = false, server = false ) => {
-  const sql = `SELECT id, employees_name, role_id FROM employees`;
-  db.query(sql, (error, employeesRows) => {
+  const sql = `SELECT * FROM roles; SELECT * FROM employees; SELECT * FROM departments;`;
+
+  db.query(sql, (error, allDataFromTables) => {
+    error ? console.log(error) : true; 
+
+    let [ roles, employees, departments ] = allDataFromTables;
+
+    let expandedRoles = roles.map(rol => {
+      let thisRolesDepartment = departments.find(dep => dep.id == rol.department_id);
+      return {
+        ...new Role(rol),
+        department_name: thisRolesDepartment.name
+      }
+    })
+
+    let expandedEmployees = employees.map(emp => {
+      let isManager = emp.role_id == roleLevels.Manager;
+      let managerOfEmployee = employees.find(em => emp.manager_id == em.id);
+      let thisEmployeesRole = expandedRoles.find(rol => rol.id == emp.role_id);
+      let thisEmployeesDepartment = departments.find(dep => dep.id == thisEmployeesRole.department_id);
+
+      return {
+        ...new Employee(emp),
+        salary: thisEmployeesRole.salary,
+        job_title: thisEmployeesRole.title,
+        department_id: thisEmployeesDepartment.id,
+        department_name: thisEmployeesDepartment.name,
+        manager_id: isManager ? null : managerOfEmployee.id,
+        manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
+      }
+    })
+
     if (error) {
       if (server == true) {
         res.status(500).json({ error: error.message });
@@ -43,12 +84,11 @@ const viewEmployees = ( res = false, server = false ) => {
     if (server == true) {
       res.json({
         message: "success",
-        data: employeesRows,
+        data: expandedEmployees,
       });
     } else {
-      if (employeesRows.length > 0) {
-        let databaseEmployees = employeesRows.map(emp => new Employee(emp));
-        console.table(databaseEmployees);
+      if (expandedEmployees.length > 0) {
+        console.table(expandedEmployees);
       } else {
         console.log(`There are no Employees in the Database Currently`);
       }
@@ -90,14 +130,21 @@ const viewDepartments = ( res = false, server = false ) => {
   });
 }
 
-const viewRoles = ( res = false, server = false ) => {
-  const sql = `SELECT * FROM employees_roles`;
-  db.query(sql, (error, roles) => {
+const viewRoles = async ( res = false, server = false ) => {
+  const sql = `SELECT * FROM roles; SELECT * FROM departments;`;
 
-    roles = roles.map(rol => ({
-      jobTitle: rol.employees_role,
-      pay: rol.income
-    }))
+  db.query(sql, (error, allDataFromTables) => {
+    error ? console.log(error) : true; 
+
+    let [ roles, departments ] = allDataFromTables;
+
+    let expandedRoles = roles.map(rol => {
+      let thisRolesDepartment = departments.find(dep => dep.id == rol.department_id);
+      return {
+        ...new Role(rol),
+        department_name: thisRolesDepartment.name
+      }
+    })
 
     if (error) {
       if (server == true) {
@@ -111,12 +158,11 @@ const viewRoles = ( res = false, server = false ) => {
     if (server == true) {
       res.json({
         message: "success",
-        data: roles,
+        data: expandedRoles,
       });
     } else {
-      if (roles.length > 0) {
-        let databaseRoles = roles.map(rol => new Role(rol));
-        console.table(databaseRoles);
+      if (expandedRoles.length > 0) {
+        console.table(expandedRoles);
       } else {
         console.log(`There are no Roles in the Database Currently`);
       }
@@ -127,11 +173,11 @@ const viewRoles = ( res = false, server = false ) => {
   });
 }
 
-const addEmployee = (employees_name, req = false, res = false, server = false) => {
-  const sql = `INSERT INTO employees (employees_name) VALUES (?)`;
+const addEmployee = (first_name, last_name, manager_id, role_id, req = false, res = false, server = false) => {
+  const sql = `INSERT INTO employees (first_name, last_name, manager_id, role_id) VALUES (????)`;
   if (server == true) {
     let { body } = req;
-    const params = [body.employees_name];
+    const params = [body.first_name, body.last_name, body.manager_id, body.role_id];
     db.query(sql, params, (err, result) => {
       if (err) {
         res.status(400).json({ error: err.message });
@@ -143,60 +189,90 @@ const addEmployee = (employees_name, req = false, res = false, server = false) =
       });
     });
   } else {
-    const params = [employees_name];
+    const params = [first_name, last_name, manager_id, role_id];
     db.query(sql, params, (err, addedEmployeeMessage) => {
       if (err) {
        console.log({ error: err.message });
         return;
       }
-      console.log(`successfully added employee`, addedEmployeeMessage);
+      console.log(`Successfully Added Employee`, addedEmployeeMessage);
     });
   }
 }
 
 const askEmployeeQuestionsAndThenAddEmployee = () => {
-  const sql = `SELECT employees_role FROM employees_roles`;
-  db.query(sql, (error, roles) => {
+  const sql = `SELECT * FROM roles; SELECT * FROM employees; SELECT * FROM departments;`;
+
+  db.query(sql, (error, allDataFromTables) => {
     error ? console.log(error) : true; 
-    roles = roles.map(rol => rol.employeesRole);
+
+    let [ roles, employees, departments ] = allDataFromTables;
+
+    let expandedRoles = roles.map(rol => {
+      let thisRolesDepartment = departments.find(dep => dep.id == rol.department_id);
+      return {
+        ...new Role(rol),
+        department_name: thisRolesDepartment.name
+      }
+    })
+
+    let expandedEmployees = employees.map(emp => {
+      let isManager = emp.role_id == roleLevels.Manager;
+      let managerOfEmployee = employees.find(em => emp.manager_id == em.id);
+      let thisEmployeesRole = expandedRoles.find(rol => rol.id == emp.role_id);
+      let thisEmployeesDepartment = departments.find(dep => dep.id == thisEmployeesRole.department_id);
+
+      return {
+        ...new Employee(emp),
+        salary: thisEmployeesRole.salary,
+        job_title: thisEmployeesRole.title,
+        department_id: thisEmployeesDepartment.id,
+        department_name: thisEmployeesDepartment.name,
+        manager_id: isManager ? null : managerOfEmployee.id,
+        manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
+      }
+    })
+
+    let managers = expandedEmployees.filter(emp => emp.role_id == roleLevels.Manager);
+    let managerNames = managers.map(emp => `${emp.first_name} ${emp.last_name}`);
+
+    let choices = expandedRoles.map(rol => rol.title);
     let questionsToAsk = [
       {
-        name: `firstName`,
         type: `input`,
+        name: `first_name`,
         message: `What is the first name of the employee?`,
       },
       {
-        name: `lastName`,
         type: `input`,
+        name: `last_name`,
         message: `What is the last name of the employee?`,
       },
       {
-        name: `employeeRole`,
+        choices,
+        name: `role`,
         type: `list`,
         message: `What is the role of the employee?`,
-        choices: roles
       },
       {
-        name: `employeeManager`,
         type: `list`,
+        name: `manager`,
+        choices: managerNames,
         message: `Who is the manager of this employee?`,
-        choices: [
-          `manager 1`,
-          `manager 2`,
-          `manager 3`,
-          `manager 4`,
-          `manager 5`,
-        ]
       }
     ];
   
     inquirer.prompt(questionsToAsk).then(employeeResponse => {
-      let firstName = employeeResponse.firstName;
-      let lastName = employeeResponse.lastName;
-      let employeeRole = employeeResponse.employeeRole;
-      let employeeManager = employeeResponse.employeeManager;
-      let employees_name = `${firstName} ${lastName}`;
-      addEmployee(employees_name);
+      let { first_name, last_name, role, manager } = employeeResponse;
+      let role_id = roles.find(rol => rol.title == role).id;
+      let manager_id = managers.find(mang => `${mang.first_name} ${mang.last_name}` == manager).id;
+      
+      if (expandedEmployees.find(emp => emp.first_name == first_name && emp.last_name == last_name)) {
+        console.log(`Employee Exists, Same Name Taken`);
+        return;
+      } else {
+        addEmployee(first_name, last_name, manager_id, role_id);
+      }
     })
   });
 }
