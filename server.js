@@ -1,8 +1,11 @@
 const express = require(`express`);
 const mySQL2 = require(`mysql2`);
 const inquirer = require(`inquirer`);
+const Department = require("./db/models/Department");
+const Role = require("./db/models/Role");
+const Employee = require("./db/models/Employee");
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 const app = express();
 
 // Express middleware
@@ -43,7 +46,12 @@ const viewEmployees = ( res = false, server = false ) => {
         data: employeesRows,
       });
     } else {
-      console.log(`employees: `, employeesRows);
+      if (employeesRows.length > 0) {
+        let databaseEmployees = employeesRows.map(emp => new Employee(emp));
+        console.table(databaseEmployees);
+      } else {
+        console.log(`There are no Employees in the Database Currently`);
+      }
       setTimeout(() => {
         startMenu();
       }, 3500)
@@ -69,7 +77,12 @@ const viewDepartments = ( res = false, server = false ) => {
         data: departments,
       });
     } else {
-      console.log(`departments: `, departments);
+      if (departments.length > 0) {
+        let databaseDepartments = departments.map(dep => new Department(dep));
+        console.table(databaseDepartments);
+      } else {
+        console.log(`There are no Departments in the Database Currently`);
+      }
       setTimeout(() => {
         startMenu();
       }, 3500)
@@ -82,7 +95,7 @@ const viewRoles = ( res = false, server = false ) => {
   db.query(sql, (error, roles) => {
 
     roles = roles.map(rol => ({
-      role: rol.employees_role,
+      jobTitle: rol.employees_role,
       pay: rol.income
     }))
 
@@ -101,7 +114,12 @@ const viewRoles = ( res = false, server = false ) => {
         data: roles,
       });
     } else {
-      console.log(`roles: `, roles);
+      if (roles.length > 0) {
+        let databaseRoles = roles.map(rol => new Role(rol));
+        console.table(databaseRoles);
+      } else {
+        console.log(`There are no Roles in the Database Currently`);
+      }
       setTimeout(() => {
         startMenu();
       }, 3500)
