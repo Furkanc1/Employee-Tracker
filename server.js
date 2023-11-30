@@ -69,11 +69,11 @@ const viewEmployees = ( res = false, server = false, newestFirst = false ) => {
 
       return {
         ...new Employee(emp),
-        salary: thisEmployeesRole.salary,
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
         manager_id: isManager ? null : managerOfEmployee.id,
+        salary: parseFloat(thisEmployeesRole.salary).toLocaleString(`en-US`),
         manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
       }
     })
@@ -238,7 +238,7 @@ const addDepartment = ( req = false, res = false, server = false ) => {
 
       return {
         ...new Employee(emp),
-        salary: thisEmployeesRole.salary,
+        salary: parseFloat(thisEmployeesRole.salary).toLocaleString(`en-US`),
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
@@ -324,7 +324,7 @@ const addRole = ( req = false, res = false, server = false ) => {
 
       return {
         ...new Employee(emp),
-        salary: thisEmployeesRole.salary,
+        salary: parseFloat(thisEmployeesRole.salary).toLocaleString(`en-US`),
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
@@ -424,7 +424,7 @@ const askEmployeeQuestionsAndThenAddEmployee = () => {
 
       return {
         ...new Employee(emp),
-        salary: thisEmployeesRole.salary,
+        salary: parseFloat(thisEmployeesRole.salary).toLocaleString(`en-US`),
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
@@ -505,7 +505,7 @@ const updateAnEmployeeRole = () => {
 
       return {
         ...new Employee(emp),
-        salary: thisEmployeesRole.salary,
+        salary: parseFloat(thisEmployeesRole.salary).toLocaleString(`en-US`),
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
