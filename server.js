@@ -272,13 +272,16 @@ const askEmployeeQuestionsAndThenAddEmployee = () => {
         name: `manager`,
         choices: managerNames,
         message: `Who is the manager of this employee?`,
+        when(response) {
+          return response.role != `Manager`;
+        }
       }
     ];
   
     inquirer.prompt(questionsToAsk).then(employeeResponse => {
       let { first_name, last_name, role, manager } = employeeResponse;
       let role_id = roles.find(rol => rol.title == role).id;
-      let manager_id = managers.find(mang => `${mang.first_name} ${mang.last_name}` == manager).id;
+      let manager_id = manager ? managers.find(mang => `${mang.first_name} ${mang.last_name}` == manager)?.id : expandedEmployees.length + 1;
       
       if (expandedEmployees.find(emp => emp.first_name == first_name && emp.last_name == last_name)) {
         console.log(`Employee Exists, Same Name Taken`);
