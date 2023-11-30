@@ -142,7 +142,7 @@ const viewDepartments = ( res = false, server = false, sortByNewestFirst = false
   });
 }
 
-const viewRoles = async ( res = false, server = false ) => {
+const viewRoles = async ( res = false, server = false, sortByNewestFirst = false ) => {
   const sql = `SELECT * FROM roles; SELECT * FROM departments;`;
 
   db.query(sql, (error, allDataFromTables) => {
@@ -174,6 +174,7 @@ const viewRoles = async ( res = false, server = false ) => {
       });
     } else {
       if (expandedRoles.length > 0) {
+        if (sortByNewestFirst == true) expandedRoles = expandedRoles.reverse();
         console.table(expandedRoles);
       } else {
         console.log(`There are no Roles in the Database Currently`);
@@ -299,6 +300,104 @@ const addDepartment = ( req = false, res = false, server = false ) => {
   });
 };
 
+const addRole = ( req = false, res = false, server = false ) => {
+  const sql = `SELECT * FROM roles; SELECT * FROM employees; SELECT * FROM departments;`;
+  db.query(sql, (error, allDataFromTables) => {
+    error ? console.log(error) : true; 
+
+    let [ roles, employees, departments ] = allDataFromTables;
+
+    let expandedRoles = roles.map(rol => {
+      let thisRolesDepartment = departments.find(dep => dep.id == rol.department_id);
+      return {
+        ...new Role(rol),
+        department_name: thisRolesDepartment.name
+      }
+    })
+
+    let expandedEmployees = employees.map(emp => {
+      let isManager = emp.role_id == roleLevels.Manager;
+      let managerOfEmployee = employees.find(em => emp.manager_id == em.id);
+      let thisEmployeesRole = expandedRoles.find(rol => rol.id == emp.role_id);
+      let thisEmployeesDepartment = departments.find(dep => dep.id == thisEmployeesRole.department_id);
+
+      return {
+        ...new Employee(emp),
+        salary: thisEmployeesRole.salary,
+        job_title: thisEmployeesRole.title,
+        department_id: thisEmployeesDepartment.id,
+        department_name: thisEmployeesDepartment.name,
+        manager_id: isManager ? null : managerOfEmployee.id,
+        manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
+      }
+    })
+
+    let managers = expandedEmployees.filter(emp => emp.role_id == roleLevels.Manager);
+    let managerNames = managers.map(emp => `${emp.first_name} ${emp.last_name}`);
+    let deparmentNames = departments.map(dep => dep.name);
+
+    inquirer.prompt([
+      {
+        type: `input`,
+        name: `roleName`,
+        message: `What is the name of the Role?`,
+      },
+      {
+        type: `input`,
+        name: `salary`,
+        message: `What is the Salary for this position?`
+      },
+      {
+        name: `department`,
+        type: `list`,
+        choices: deparmentNames
+      }
+    ]).then(response => {
+      let salary = response.salary;
+      let roleName = response.roleName;
+      let currentCapitalizedRoleName = capWords(roleName);
+      let roleNames = expandedRoles.map(rol => rol.title);
+      let selectedDepartment = response.department;
+      let selectedDepartmentID = departments.find(dep => dep.name == selectedDepartment).id;
+
+      if (roleNames.includes(currentCapitalizedRoleName)) {
+        console.log(`Role Already Exists`);
+        setTimeout(() => {
+          startMenu();
+        }, 2500);
+        return;
+      } else {
+        const sql = `INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?);`;
+        if (server == true) {
+          let { body } = req;
+          const params = [body.roleName, body.salary, body.selectedDepartmentID];
+          db.query(sql, params, (err, result) => {
+            if (err) {
+              res.status(400).json({ error: err.message });
+              return;
+            }
+            res.json({
+              message: "successfully added a role:",
+              data: body,
+            });
+          });
+        } else {
+          const params = [currentCapitalizedRoleName, salary, selectedDepartmentID];
+          db.query(sql, params, (err, addedRoleMessage) => {
+            if (err) {
+             console.log({ error: err.message });
+              return;
+            }
+            console.log(`Successfully Added Role`);
+            let sortByNewestFirst = true;
+            viewRoles(false, false, sortByNewestFirst);
+          });
+        }
+      }
+    })
+  });
+};
+
 const askEmployeeQuestionsAndThenAddEmployee = () => {
   const sql = `SELECT * FROM roles; SELECT * FROM employees; SELECT * FROM departments;`;
 
@@ -413,8 +512,13 @@ const startMenu = () => {
       viewRoles();
     } else if (choice == mainMenuChoices.AddADepartment) {
       addDepartment();
+    } else if (choice == mainMenuChoices.AddARole) {
+      addRole();
     } else {
-      console.log(`not coded yet`);
+      console.log(`Not Coded Yet`);
+      setTimeout(() => {
+        startMenu();
+      }, 2500);
     }
   });
 };
