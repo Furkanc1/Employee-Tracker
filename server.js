@@ -12,6 +12,12 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+capWords = (str) => {
+  return str.replace(/\b\w/g, (match) => {
+    return match.toUpperCase();
+  });
+}
+
 const roleLevels = {
   Manager: 1,
   Assistant_Manager: 2,
@@ -39,7 +45,7 @@ const db = mySQL2.createConnection(
   }
 );
 
-const viewEmployees = ( res = false, server = false ) => {
+const viewEmployees = ( res = false, server = false, newestFirst = false ) => {
   const sql = `SELECT * FROM roles; SELECT * FROM employees; SELECT * FROM departments;`;
 
   db.query(sql, (error, allDataFromTables) => {
@@ -71,6 +77,11 @@ const viewEmployees = ( res = false, server = false ) => {
         manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
       }
     })
+
+    if (newestFirst == true) {
+      expandedEmployees = expandedEmployees.reverse();
+      // expandedEmployees = expandedEmployees.sort((firstEmployee, secondEmployee) => secondEmployee.id - firstEmployee.id);
+    };
 
     if (error) {
       if (server == true) {
@@ -174,7 +185,7 @@ const viewRoles = async ( res = false, server = false ) => {
 }
 
 const addEmployee = (first_name, last_name, manager_id, role_id, req = false, res = false, server = false) => {
-  const sql = `INSERT INTO employees (first_name, last_name, manager_id, role_id) VALUES (????)`;
+  const sql = `INSERT INTO employees (first_name, last_name, manager_id, role_id) VALUES (?, ?, ?, ?);`;
   if (server == true) {
     let { body } = req;
     const params = [body.first_name, body.last_name, body.manager_id, body.role_id];
@@ -189,13 +200,15 @@ const addEmployee = (first_name, last_name, manager_id, role_id, req = false, re
       });
     });
   } else {
-    const params = [first_name, last_name, manager_id, role_id];
+    const params = [capWords(first_name), capWords(last_name), manager_id, role_id];
     db.query(sql, params, (err, addedEmployeeMessage) => {
       if (err) {
        console.log({ error: err.message });
         return;
       }
-      console.log(`Successfully Added Employee`, addedEmployeeMessage);
+      console.log(`Successfully Added Employee`);
+      let sortByNewestFirst = true;
+      viewEmployees(false, false, sortByNewestFirst);
     });
   }
 }
