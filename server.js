@@ -242,13 +242,14 @@ const addDepartment = ( req = false, res = false, server = false ) => {
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
+        fullName: `${emp.first_name} ${emp.last_name}`,
         manager_id: isManager ? null : managerOfEmployee.id,
         manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
       }
     })
 
     let managers = expandedEmployees.filter(emp => emp.role_id == roleLevels.Manager);
-    let managerNames = managers.map(emp => `${emp.first_name} ${emp.last_name}`);
+    let managerNames = managers.map(emp => emp.fullName);
 
     inquirer.prompt([
       {
@@ -327,13 +328,14 @@ const addRole = ( req = false, res = false, server = false ) => {
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
+        fullName: `${emp.first_name} ${emp.last_name}`,
         manager_id: isManager ? null : managerOfEmployee.id,
         manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
       }
     })
 
     let managers = expandedEmployees.filter(emp => emp.role_id == roleLevels.Manager);
-    let managerNames = managers.map(emp => `${emp.first_name} ${emp.last_name}`);
+    let managerNames = managers.map(emp => emp.fullName);
     let deparmentNames = departments.map(dep => dep.name);
 
     inquirer.prompt([
@@ -426,13 +428,14 @@ const askEmployeeQuestionsAndThenAddEmployee = () => {
         job_title: thisEmployeesRole.title,
         department_id: thisEmployeesDepartment.id,
         department_name: thisEmployeesDepartment.name,
+        fullName: `${emp.first_name} ${emp.last_name}`,
         manager_id: isManager ? null : managerOfEmployee.id,
         manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
       }
     })
 
     let managers = expandedEmployees.filter(emp => emp.role_id == roleLevels.Manager);
-    let managerNames = managers.map(emp => `${emp.first_name} ${emp.last_name}`);
+    let managerNames = managers.map(emp => emp.fullName);
 
     let choices = expandedRoles.map(rol => rol.title);
     let questionsToAsk = [
@@ -478,6 +481,78 @@ const askEmployeeQuestionsAndThenAddEmployee = () => {
   });
 }
 
+const updateAnEmployeeRole = () => {
+  const sql = `SELECT * FROM roles; SELECT * FROM employees; SELECT * FROM departments;`;
+
+  db.query(sql, (error, allDataFromTables) => {
+    error ? console.log(error) : true; 
+
+    let [ roles, employees, departments ] = allDataFromTables;
+
+    let expandedRoles = roles.map(rol => {
+      let thisRolesDepartment = departments.find(dep => dep.id == rol.department_id);
+      return {
+        ...new Role(rol),
+        department_name: thisRolesDepartment.name
+      }
+    })
+
+    let expandedEmployees = employees.map(emp => {
+      let isManager = emp.role_id == roleLevels.Manager;
+      let managerOfEmployee = employees.find(em => emp.manager_id == em.id);
+      let thisEmployeesRole = expandedRoles.find(rol => rol.id == emp.role_id);
+      let thisEmployeesDepartment = departments.find(dep => dep.id == thisEmployeesRole.department_id);
+
+      return {
+        ...new Employee(emp),
+        salary: thisEmployeesRole.salary,
+        job_title: thisEmployeesRole.title,
+        department_id: thisEmployeesDepartment.id,
+        department_name: thisEmployeesDepartment.name,
+        fullName: `${emp.first_name} ${emp.last_name}`,
+        manager_id: isManager ? null : managerOfEmployee.id,
+        manager_name: isManager ? null : `${managerOfEmployee.first_name} ${managerOfEmployee.last_name}`,
+      }
+    })
+
+    let managers = expandedEmployees.filter(emp => emp.role_id == roleLevels.Manager);
+    let managerNames = managers.map(emp => emp.fullName);
+    let employeeNames = expandedEmployees.map(emp => emp.fullName);
+    let employeeNamesWithRolesAndIDs = expandedEmployees.map(emp => `${emp.id} - ${emp.fullName} - ${emp.job_title}`);
+
+    inquirer.prompt([
+      {
+        type: `list`,
+        name: `employee`,
+        choices: employeeNamesWithRolesAndIDs,
+        message: `Which Employee Do You Want To Update?`,
+      }
+    ]).then(response => {
+      let employee = response.employee;
+      let employeeID = parseFloat(employee.split(` - `)[0]);
+      let employeeToUpdate = expandedEmployees.find(emp => emp.id == employeeID);
+      let roleTitles = expandedRoles.filter(rol => rol.id != employeeToUpdate.role_id).map(rol => rol.title);
+      inquirer.prompt([
+        {
+          type: `list`,
+          choices: roleTitles,
+          name: `roleToChangeTo`,
+          message: `What Role Would You Like To Change Them To?`,
+        }
+      ]).then(innerResponse => {
+        let roleToChangeTo = innerResponse.roleToChangeTo;
+        let roleToChangeToID = expandedRoles.find(rol => rol.title == roleToChangeTo).id;
+
+        const updateSQL = `UPDATE employees SET role_id = ? WHERE id = ?`;
+        db.query(updateSQL, [roleToChangeToID, employeeToUpdate.id], (error, updatedEmployee) => {
+          error ? console.log(error) : true; 
+          viewEmployees();
+        })
+      })
+    })
+  });
+}
+
 const mainMenuChoices = {
   ViewAllDepartments: `View all departments`,
   ViewAllRoles: `View all roles`,
@@ -514,6 +589,8 @@ const startMenu = () => {
       addDepartment();
     } else if (choice == mainMenuChoices.AddARole) {
       addRole();
+    } else if (choice == mainMenuChoices.UpdateAnEmployeeRole) {
+      updateAnEmployeeRole();
     } else {
       console.log(`Not Coded Yet`);
       setTimeout(() => {
