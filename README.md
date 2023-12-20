@@ -2,6 +2,9 @@
 
 (PSA> Used tutor Help + Worked on with Brother + looked to chatGPT for influence.)
 
+LINK TO WALKTHROUGH VID: 
+https://www.loom.com/share/6e9de7ac9fb84cee9e118b5f5e106de0?sid=e57c68a8-ab0a-4e4c-8d77-aa3de7f9a7af
+
 ## Your Task
 
 Developers frequently have to create interfaces that allow non-developers to easily view and interact with information stored in databases. These interfaces are called **content management systems (CMS)**. Your assignment this week is to build a command-line application from scratch to manage a company's employee database, using Node.js, Inquirer, and MySQL.
